@@ -7,7 +7,14 @@ from numpy.typing import NDArray
 
 from .basic import radius_query_kdtree
 
-def find_radius_cycles(rs: NDArray[np.float_], cutoff: float = 3.6, max_length: int = 8, mode: Literal["rule", "none"] = "rule", pbc: NDArray[np.bool_] | bool = False, cell: NDArray[np.float_] | None = None):
+def find_radius_cycles(rs: NDArray, 
+                       cutoff: float = 3.6, 
+                       max_length: int = 8, 
+                       mode: Literal["rule", "none"] = "rule", 
+                       pbc: NDArray | bool = False, 
+                       cell: NDArray | None = None
+                       ):
+    
     nei = radius_query_kdtree(rs, k = 5, cutoff = cutoff, pbc = pbc, cell = cell)[1][:,1:]
     
     G = nx.Graph()

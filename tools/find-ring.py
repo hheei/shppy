@@ -4,13 +4,14 @@ import argparse
 import numpy as np
 import pandas as pd
 
+from ase import Atoms
 from functools import partial
 from collections import defaultdict
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from shppy.atom.topo import radius_query_kdtree, find_radius_cycles
-from shppy.atom import Atoms, pbc_map
+from shppy.atom import pbc_map
 from shppy import io
 
 def parse_args():

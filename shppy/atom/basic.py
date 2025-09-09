@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 
 @nb.njit(fastmath=True)
 def pbc_map(rs: np.ndarray, cell: np.ndarray | None = None, pbc: NDArray[np.bool_] | bool = False, align_center = False):
-    if cell is None or not pbc:
+    if cell is None or np.all(~pbc):
         return rs
     
     if isinstance(pbc, bool):
@@ -59,7 +59,13 @@ def pbc_repeat(rs: np.ndarray, cell: np.ndarray | None = None, pbc: NDArray[np.b
     
     return out
 
-def radius_query_kdtree(rs: NDArray[np.float_], k: int, cutoff: float, query: NDArray[np.float_] | None = None, cell: NDArray[np.float_] | None = None, pbc: NDArray[np.bool_] | bool = False):
+def radius_query_kdtree(rs: NDArray, 
+                        k: int, 
+                        cutoff: float, 
+                        query: NDArray | None = None, 
+                        cell: NDArray | None = None, 
+                        pbc: NDArray | bool = False
+                        ) -> tuple[NDArray, NDArray, KDTree]:
     if query is None:
         query = rs
 
@@ -83,7 +89,13 @@ def radius_query_kdtree(rs: NDArray[np.float_], k: int, cutoff: float, query: ND
 
     return distances, bonds, tree
 
-def radius_query_brute(rs: NDArray[np.float_], k: int, cutoff: float, query: NDArray[np.float_] | None = None, cell: NDArray[np.float_] | None = None, pbc: NDArray[np.bool_] | bool = False):
+def radius_query_brute(rs: NDArray, 
+                       k: int, 
+                       cutoff: float, 
+                       query: NDArray | None = None, 
+                       cell: NDArray | None = None, 
+                       pbc: NDArray | bool = False
+                       ) -> tuple[NDArray, NDArray, None]:
     if query is None:
         query = rs
     
