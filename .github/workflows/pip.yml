@@ -37,4 +37,4 @@ jobs:
 
     # 4. 運行測試 (移除 cd tests，直接在根目錄執行)
     - name: Test
-      run: uv run pytest
+      run: uv run pytest tests --import-mode=importlib
