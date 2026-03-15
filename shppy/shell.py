@@ -16,8 +16,7 @@ class Shell:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True,
-            bufsize=1,
+            bufsize=0,
             env=os.environ.copy()
         )
         
@@ -74,12 +73,14 @@ class Shell:
         token = f"__SHELL_EXIT_{uuid.uuid4().hex}__"
         code = -1
         out_acc, err_acc = [], []
+        out_buf = ""
+        err_buf = ""
         
         try:
             if self.proc is None or self.proc.poll() is not None:
                 err_acc.append("Shell process has been closed or died")
             else:
-                self._stdin.write(f"{command}\nprintf '%s %s\\n' '{token}' $?\n")
+                self._stdin.write(f"{command}\nprintf '%s %s\\n' '{token}' $?\n".encode())
                 self._stdin.flush()
 
                 stdout_fd = self._stdout.fileno()
@@ -94,21 +95,33 @@ class Shell:
 
                     readable, _, _ = select.select(active_fds, [], [], 0.5)
                     for fd in readable:
-                        stream = self._stdout if fd == stdout_fd else self._stderr
-                        line = stream.readline()
-                        
-                        if not line:
+                        chunk = os.read(fd, 4096)
+                        if not chunk:
                             active_fds.discard(fd)
                             continue
 
+                        text = chunk.decode(errors="replace")
+
                         if fd == stdout_fd:
-                            if line.startswith(token):
-                                code = int(line.split()[1])
-                                active_fds.clear()
-                            else:
-                                out_acc.append(line.rstrip("\n"))
+                            out_buf += text
+                            while "\n" in out_buf:
+                                line, out_buf = out_buf.split("\n", 1)
+                                line = line.rstrip("\r")
+                                if line.startswith(token):
+                                    code = int(line.split(maxsplit=1)[1])
+                                    active_fds.clear()
+                                    break
+                                out_acc.append(line)
                         else:
-                            err_acc.append(line.rstrip("\n"))
+                            err_buf += text
+                            while "\n" in err_buf:
+                                line, err_buf = err_buf.split("\n", 1)
+                                err_acc.append(line.rstrip("\r"))
+
+                if out_buf and code == -1:
+                    out_acc.append(out_buf.rstrip("\r\n"))
+                if err_buf:
+                    err_acc.append(err_buf.rstrip("\r\n"))
 
             with self._state_lock:
                 if generation == self._generation:

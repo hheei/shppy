@@ -35,3 +35,5 @@ shppy/_version.py
 out/
 _debug.ipynb
 _debug.py
+
+uv.lock
