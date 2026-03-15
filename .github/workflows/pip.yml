@@ -38,7 +38,7 @@ jobs:
     # 3. 安裝項目與依賴 (uv sync 或 uv pip install)
     - name: Install dependencies
       run: |
-        uv pip install .[test]
+        uv sync --all-groups
 
     # 4. 運行測試 (移除 cd tests，直接在根目錄執行)
     - name: Test
