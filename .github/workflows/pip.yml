@@ -19,6 +19,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
 
     # 1. 安裝 uv
     - name: Install uv
