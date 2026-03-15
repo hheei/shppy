@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
+import pytest
+
 from shppy.shell import Shell
+
+
+pytestmark = pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Shell module tests are not supported on Windows"
+)
 
 
 def test_env_persistence_and_chained_run() -> None:
