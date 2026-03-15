@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "Shppy"
-dependencies = ["ase", "numpy", "scipy", "networkx", "plotext", "pydantic", "xmltodict"]
+dependencies = ["ase", "numpy", "scipy", "networkx", "plotext", "xmltodict"]
 dynamic = ["version"]
 description="A tool library for the Chon-Hei Lo's research"
 readme = "README.md"
