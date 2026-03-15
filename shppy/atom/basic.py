@@ -1,9 +1,6 @@
 import numpy as np
 import numba as nb
-import networkx as nx
 from scipy.spatial import KDTree
-from scipy.spatial.distance import cdist
-from typing import Sequence
 from numpy.typing import NDArray
 
 @nb.njit(fastmath=True)

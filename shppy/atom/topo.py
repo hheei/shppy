@@ -1,11 +1,12 @@
+from collections import Counter, defaultdict
+from typing import Literal
+
 import networkx as nx
 import numpy as np
-from collections import defaultdict, Counter
+from numpy.typing import NDArray
 
-from typing import Literal
-from numpy.typing import NDArray    
+from shppy.atom.basic import radius_query_kdtree
 
-from .basic import radius_query_kdtree
 
 def find_radius_cycles(rs: NDArray, 
                        cutoff: float = 3.6, 
@@ -60,4 +61,5 @@ def find_radius_cycles(rs: NDArray,
                 for atom in cycle:
                     ats[atom].append(i)
             
+        return outs, G
         return outs, G
