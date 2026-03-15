@@ -39,15 +39,6 @@ wheel.packages = ["shppy"]
 [tool.scikit-build.cmake.define]
 EXTRA_COMPILE_OPTIONS = ""
 
-[tool.cibuildwheel]
-# Necessary to see build output from the actual compilation
-build-verbosity = 1
-skip = "*win32 *-manylinux_i686 *-musllinux_* pp*"
-
-# Run pytest to ensure that the package was correctly built
-test-command = "pytest {project}/tests"
-test-requires = "pytest"
-
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]

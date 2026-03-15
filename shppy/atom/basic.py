@@ -1,9 +1,7 @@
 import numpy as np
-import numba as nb
 from scipy.spatial import KDTree
 from numpy.typing import NDArray
 
-@nb.njit(fastmath=True)
 def pbc_map(rs: np.ndarray, cell: np.ndarray | None = None, pbc: NDArray[np.bool_] | bool = False, align_center = False):
     if cell is None or np.all(~pbc):
         return rs
@@ -23,7 +21,6 @@ def pbc_map(rs: np.ndarray, cell: np.ndarray | None = None, pbc: NDArray[np.bool
             
     return (cell.T @ norm_rs).T
 
-@nb.njit(fastmath=True)
 def pbc_repeat(rs: np.ndarray, cell: np.ndarray | None = None, pbc: NDArray[np.bool_] | bool = False):
     """
     Append periodic images of the positions to the input, use this when box_size is not diagonal, otherwise KDTree can be used directly.
