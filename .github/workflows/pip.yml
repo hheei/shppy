@@ -1,4 +1,4 @@
-name: Pip
+name: CI (uv)
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build with Pip
+    name: Build with uv
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
@@ -20,19 +20,26 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: actions/setup-python@v5
+    # 1. 安裝 uv
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        enable-cache: true # 自動快取依賴，下次跑更快
+
+    # 2. 設置 Python (uv 會自動管理 Python 版本)
+    - name: Set up Python
+      run: uv python install ${{ matrix.python-version }}
 
     - name: Set min macOS version
       if: runner.os == 'macOS'
       run: |
         echo "MACOSX_DEPLOYMENT_TARGET=10.14" >> $GITHUB_ENV
 
-    - name: Build and install
+    # 3. 安裝項目與依賴 (uv sync 或 uv pip install)
+    - name: Install dependencies
       run: |
-        python -m pip install pytest
-        pip install --verbose .
+        uv pip install .[test]
 
+    # 4. 運行測試 (移除 cd tests，直接在根目錄執行)
     - name: Test
-      run: cd tests && python -m pytest
+      run: uv run pytest
