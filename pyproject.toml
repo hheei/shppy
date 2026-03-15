@@ -8,7 +8,7 @@ dependencies = ["ase", "numpy", "scipy", "networkx", "plotext", "pydantic", "xml
 dynamic = ["version"]
 description="A tool library for the Chon-Hei Lo's research"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 
 authors = [
   { name = "Season Lo", email = "chlo-mo@outlook.com" },
@@ -18,15 +18,16 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 [project.optional-dependencies]
 test = [
-  "pytest>=8.0",
+  "pytest",
 ]
 
 
@@ -44,9 +45,6 @@ build-verbosity = 1
 # Run pytest to ensure that the package was correctly built
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
-
-# Don't test Python 3.8 wheels on macOS/arm64
-test-skip="cp38-macosx_*:arm64"
 
 # Needed for full C++17 support
 [tool.cibuildwheel.macos.environment]
