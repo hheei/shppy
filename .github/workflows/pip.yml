@@ -30,11 +30,6 @@ jobs:
     - name: Set up Python
       run: uv python install ${{ matrix.python-version }}
 
-    - name: Set min macOS version
-      if: runner.os == 'macOS'
-      run: |
-        echo "MACOSX_DEPLOYMENT_TARGET=10.14" >> $GITHUB_ENV
-
     # 3. 安裝項目與依賴 (uv sync 或 uv pip install)
     - name: Install dependencies
       run: |

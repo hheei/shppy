@@ -25,9 +25,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 
-[project.optional-dependencies]
-test = [
-  "pytest",
+[dependency-groups]
+dev = [
+    "pytest",
 ]
 
 
