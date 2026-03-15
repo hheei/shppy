@@ -57,7 +57,7 @@ jobs:
 
     - name: Build wheels
       run: |
-        uvx --from cibuildwheel==2.22.0 --with virtualenv cibuildwheel --output-dir wheelhouse
+        uvx --from cibuildwheel==2.22.0 cibuildwheel --output-dir wheelhouse
       env:
         CIBW_USE_UV: true
         CIBW_TEST_COMMAND: ""
