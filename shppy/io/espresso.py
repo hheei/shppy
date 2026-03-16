@@ -34,11 +34,11 @@ class EspressoParser:
         symbols = [at["@name"] for at in data["atomic_positions"]["atom"]]
         positions = [list(map(float,at["#text"].split())) for at in data["atomic_positions"]["atom"]]
         positions = np.array(positions)
-        positions *= 0.529177 # Bohr to Angstrom conversion
+        positions *= 0.529177210903 # Bohr to Angstrom conversion
         cell = data["cell"]
         cell = [list(map(float, cell[x].split())) for x in ["a1", "a2", "a3"]]
         cell = np.array(cell)
-        cell *= 0.529177 # Bohr to Angstrom conversion
+        cell *= 0.529177210903 # Bohr to Angstrom conversion
         
         return Atoms(symbols = symbols, positions = positions, cell = cell, pbc = self.pbc)
     
