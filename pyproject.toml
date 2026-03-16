@@ -4,7 +4,16 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "Shppy"
-dependencies = ["ase", "numpy", "scipy", "networkx", "plotext", "xmltodict"]
+dependencies = [
+  "ase",
+  "numpy",
+  "scipy",
+  "networkx",
+  "plotext",
+  "xmltodict",
+  "typer[all]",
+  "prompt_toolkit",
+]
 dynamic = ["version"]
 description="A tool library for the Chon-Hei Lo's research"
 readme = "README.md"
@@ -24,6 +33,9 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
+
+[project.scripts]
+shppy = "shppy.cli:app"
 
 [dependency-groups]
 dev = [
