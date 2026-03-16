@@ -1,4 +1,3 @@
-#%%
 import xmltodict as x2d
 import numpy as np
 import re
@@ -24,9 +23,6 @@ class EspressoParser:
 
         Args:
             path (str): Path to the file.
-
-        Raises:
-            NotImplementedError: _description_
         """
         path = Path(path)
         if path.suffix == ".xml":

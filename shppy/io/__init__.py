@@ -1,1 +1,1 @@
-from shppy.io.espresso import EspressoParser
+from shppy.io.espresso import EspressoParser, EspressoIn
