@@ -42,8 +42,16 @@ class EspressoParser:
     
     def in_atoms(self):
         pbc = [True, True, True]
-        if self._data["input"]["boundary_conditions"]["assume_isolated"] == "esm":
+        is_esm = self._data["input"]["boundary_conditions"]["assume_isolated"] == "esm"
+        if is_esm:
             pbc[2] = False
+        
+        atoms = self.from_atomic_structure(self._data["input"]["atomic_structure"])
+        
+        if is_esm:
+            atoms.positions[:, 2] *= -1
+            atoms.positions[:, 2] += atoms.cell.array[2, 2] / 2
+        
         return self.from_atomic_structure(self._data["input"]["atomic_structure"])
 
     @overload
@@ -52,18 +60,36 @@ class EspressoParser:
     def step_atoms(self, index: slice = slice(None)) -> list[Atoms]: ...
 
     def step_atoms(self, index: int | slice = slice(None)):
+        pbc = [True, True, True]
+        is_esm = self._data["input"]["boundary_conditions"]["assume_isolated"] == "esm"
+        if is_esm:
+            pbc[2] = False
         if isinstance(index, slice):
-            return [self.from_atomic_structure(step["atomic_structure"]) for step in self._data["step"][index]]
+            lst_atoms = [self.from_atomic_structure(step["atomic_structure"]) for step in self._data["step"][index]]
+            if is_esm:
+                for atoms in lst_atoms:
+                    atoms.positions[:, 2] *= -1
+                    atoms.positions[:, 2] += atoms.cell.array[2, 2] / 2 
+            return lst_atoms
         elif isinstance(index, int):
-            return self.from_atomic_structure(self._data["step"][index]["atomic_structure"])
+            atoms = self.from_atomic_structure(self._data["step"][index]["atomic_structure"])
+            if is_esm:
+                atoms.positions[:, 2] *= -1
+                atoms.positions[:, 2] += atoms.cell.array[2, 2] / 2
+            return atoms
         else:
             raise TypeError("Index must be an integer or a slice.")
         
     def out_atoms(self):
         pbc = [True, True, True]
-        if self._data["output"]["boundary_conditions"]["assume_isolated"] == "esm":
+        is_esm = self._data["output"]["boundary_conditions"]["assume_isolated"] == "esm"
+        if is_esm:
             pbc[2] = False
-        return self.from_atomic_structure(self._data["output"]["atomic_structure"])
+        atoms = self.from_atomic_structure(self._data["output"]["atomic_structure"])
+        if is_esm:
+            atoms.positions[:, 2] *= -1
+            atoms.positions[:, 2] += atoms.cell.array[2, 2] / 2
+        return atoms
 
 if __name__ == "__main__":
     fixture = Path(__file__).resolve().parents[2] / "tests" / "data" / "espresso" / "ice_mol.xml"
