@@ -99,6 +99,13 @@ class EspressoParser:
             atoms.positions[:, 2] += atoms.cell.array[2, 2] / 2
         return atoms
     
+    @property
+    def fermi_energy(self) -> float:
+        """
+        Unit: eV
+        """
+        return 27.211386245988 * float(self._data["output"]["band_structure"]["fermi_energy"])
+    
 @dataclass
 class EspressoIn:
     """
