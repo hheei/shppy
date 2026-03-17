@@ -68,6 +68,24 @@ class Shell:
 
         self._last_future = self._executor.submit(self._worker, command, timeout, current_gen)
         return self
+    
+    def cd(self, path) -> "Shell":
+        return self.run(f"cd {path}")
+    
+    def pwd(self) -> "Shell":
+        return self.run("pwd")
+    
+    def ls(self, path="", flag="") -> "Shell":
+        return self.run(f"ls {flag} {path}")
+    
+    def source(self, path) -> "Shell":
+        return self.run(f". {path}")
+    
+    def export(self, **kwargs) -> "Shell":
+        return self.run(f"export {' '.join(f'{k}={v}' for k, v in kwargs.items())}")
+    
+    def echo(self, text) -> "Shell":
+        return self.run(f"echo {text}")
 
     def _worker(self, command: str, timeout: float, generation: int) -> None:
         token = f"__SHELL_EXIT_{uuid.uuid4().hex}__"
