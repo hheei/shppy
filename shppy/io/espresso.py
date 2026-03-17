@@ -128,7 +128,6 @@ class EspressoIn:
     k_points: str = "" #TODO
     
     cell_parameters_mode = "angstrom"
-    cell_parameters: np.ndarray = field(default_factory=lambda: np.diag(np.ones(3)))
     
     occupation: list[list[float]] = field(default_factory=lambda: [[]])
     
@@ -142,6 +141,10 @@ class EspressoIn:
     hubbard: str = "" #TODO
 
     _BOHR_TO_ANG = 0.529177210903
+
+    @property
+    def cell_parameters(self) -> np.ndarray:
+        return np.array(self.atoms.cell.array, dtype=float)
 
     @staticmethod
     def _strip_comments(text: str) -> str:
@@ -330,7 +333,6 @@ class EspressoIn:
                     continue
 
         cell_parameters_mode = "angstrom"
-        cell_parameters = np.diag(np.ones(3))
         parsed_cell: np.ndarray | None = None
         cell_card = cls._extract_card(clean, "CELL_PARAMETERS")
         if cell_card:
@@ -352,10 +354,11 @@ class EspressoIn:
                     break
             if len(rows) == 3:
                 parsed_cell = cls._convert_cell(np.array(rows, dtype=float), cell_parameters_mode, system)
-                cell_parameters = parsed_cell
 
         atomic_unit = "angstrom"
         atoms = Atoms()
+        if parsed_cell is not None:
+            atoms.set_cell(parsed_cell)
         positions_card = cls._extract_card(clean, "ATOMIC_POSITIONS")
         if positions_card:
             mode, body = positions_card
@@ -388,9 +391,7 @@ class EspressoIn:
             if symbols:
                 raw_positions = np.array(coords, dtype=float)
                 cart_positions = cls._convert_positions(raw_positions, atomic_unit, parsed_cell, system)
-                atoms = Atoms(symbols=symbols, positions=cart_positions)
-                if parsed_cell is not None:
-                    atoms.set_cell(parsed_cell)
+                atoms = Atoms(symbols=symbols, positions=cart_positions, cell=parsed_cell)
                 parsed_mask = np.array(masks, dtype=int)
             else:
                 parsed_mask = np.ones((0, 3), dtype=int)
@@ -467,8 +468,8 @@ class EspressoIn:
             init_kwargs["atomic_unit"] = atomic_unit
             init_kwargs["atoms"] = atoms
             init_kwargs["mask"] = parsed_mask
-        if cell_card is not None and parsed_cell is not None:
-            init_kwargs["cell_parameters"] = cell_parameters
+        elif cell_card is not None and parsed_cell is not None:
+            init_kwargs["atoms"] = atoms
         if occ_card is not None and occupation != [[]]:
             init_kwargs["occupation"] = occupation
         if con_card is not None:
@@ -590,12 +591,13 @@ class EspressoIn:
                 lines.append(f"  {symbol} {mass:.10g} {pseudo}")
             lines.append("")
 
-        if isinstance(self.cell_parameters, np.ndarray) and self.cell_parameters.shape == (3, 3):
+        cell_array = np.array(self.atoms.cell.array, dtype=float)
+        if cell_array.shape == (3, 3) and np.any(cell_array):
             header = "CELL_PARAMETERS"
             if self.cell_parameters_mode:
                 header += f" {self.cell_parameters_mode}"
             lines.append(header)
-            for row in self.cell_parameters:
+            for row in cell_array:
                 lines.append(f"  {row[0]:16.12g} {row[1]:16.12g} {row[2]:16.12g}")
             lines.append("")
 
