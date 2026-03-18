@@ -3,18 +3,24 @@ import numpy as np
 import re
 from shppy import Atoms
 from pathlib import Path
-from typing import overload, Any
+from typing import overload, Any, Optional
 from dataclasses import dataclass, field
 
 @dataclass
 class OutEnergy:
     etot: float
-    eband: float
-    ehart: float
-    vtxc: float
-    etxc: float
-    ewald: float
-    demet: float
+    eband: Optional[float] = None
+    ehart: Optional[float] = None
+    vtxc: Optional[float] = None
+    etxc: Optional[float] = None
+    ewald: Optional[float] = None
+    demet: Optional[float] = None
+    efieldcorr: Optional[float] = None
+    potentiostat_contr: Optional[float] = None
+    gatefield_contr: Optional[float] = None
+    vdW_term: Optional[float] = None
+    esol: Optional[float] = None
+    levelshift_contr: Optional[float] = None
 
 class EspressoParser:
     def __init__(self, path):
