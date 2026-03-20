@@ -1,127 +1,67 @@
-from typing import Any
-from functools import partial
-from prompt_toolkit.layout.containers import (
-    AnyContainer,
-    Container,
-    HSplit,
-    VSplit,
-    Window,
-    DynamicContainer,
-)
-from prompt_toolkit.layout.controls import FormattedTextControl
-from prompt_toolkit.formatted_text import AnyFormattedText, Template
+import re
 
-from typing import Any
-from prompt_toolkit.layout.containers import (
-    AnyContainer,
-    Container,
-    HSplit,
-    VSplit,
-    Window,
-    DynamicContainer,
-)
-from prompt_toolkit.layout.controls import FormattedTextControl
-from prompt_toolkit.formatted_text import AnyFormattedText, Template
+text = """
+&nm1
+  a = 1,
+  path = '/usr/local/bin/data/',  ! 這裡的斜線不會觸發結束
+  message = "Don't stop here /",  ! 雙引號內的斜線也安全
+  CARDS = 2
+/
 
-class InformationFrame:
-    def __init__(
-        self,
-        body: AnyContainer,
-        title: AnyFormattedText = "",
-        style: str = "",
-        width: Any = None,
-        height: Any = None,
-        top_left: str = "◇",
-        top_right: str = "╮",
-        bottom_left: str = "├",
-        bottom_right: str = "╯",
-        horizontal_char: str = "─",
-        vertical_char: str = "│",
-    ) -> None:
-        self.body = body
-        self.title = title
-        self.style = style
-        self.top_left = top_left
-        self.top_right = top_right
-        self.bottom_left = bottom_left
-        self.bottom_right = bottom_right
-        self.horizontal_char = horizontal_char
-        self.vertical_char = vertical_char
+CARDS
+1.0 2.0 3.0
 
-        # 樣式獲取
-        def get_border_style():
-            return f"class:frame.border {self.style}"
+&nm2
+  b = 3
+/
 
-        def get_label_style():
-            return f"class:frame.label {self.style}"
+POINTS ABC
+7 8 9
+"""
 
-        # --- 頂部列: ◇ Title ──────╮ ---
-        # 使用 Window(char=...) 會自動填滿該元件分配到的所有寬度
-        top_row = VSplit([
-            Window(width=1, char=lambda: self.top_left, style=get_border_style),
-            Window(
-                content=FormattedTextControl(lambda: Template(" {} ").format(self.title)),
-                style=get_label_style,
-                dont_extend_width=True # 確保標題只佔用必要的寬度
-            ),
-            Window(char=lambda: self.horizontal_char, style=get_border_style), # 真正的動態橫線
-            Window(width=1, char=lambda: self.top_right, style=get_border_style),
-        ], height=1)
+# 定義已知的 Cards 關鍵字
+known_cards = ["CARDS", "POINTS", "ELEMENTS"]
+cards_pattern = "|".join(known_cards)
 
-        # --- 中間內容列: │ body │ ---
-        middle_row = VSplit([
-            Window(width=1, char=lambda: self.vertical_char, style=get_border_style),
-            DynamicContainer(lambda: self.body),
-            Window(width=1, char=lambda: self.vertical_char, style=get_border_style),
-        ])
+# [升級] Namelist 規則：略過字串內的斜線
+# 解析：匹配單引號字串 | 匹配雙引號字串 | 匹配非斜線非引號的字元
+namelist_regex = r"(?:^&(\w+)((?:'[^']*'|\"[^\"]*\"|[^/\"']+)*)/)"
 
-        # --- 底部列: ├──────────────╯ ---
-        bottom_row = VSplit([
-            Window(width=1, char=lambda: self.bottom_left, style=get_border_style),
-            Window(char=lambda: self.horizontal_char, style=get_border_style), # 真正的動態橫線
-            Window(width=1, char=lambda: self.bottom_right, style=get_border_style),
-        ], height=1)
+# Cards 規則 (與上次相同，包含可選屬性)
+cards_regex = rf"(?:^({cards_pattern})\b(?:[ \t]+([^\n\r]+?))?[ \t]*(?:\r?\n|\Z)(.*?)(?=^&|^(?:{cards_pattern})\b|\Z))"
 
-        # 封裝成最終容器
-        self.container = HSplit(
-            [
-                top_row,
-                middle_row,
-                bottom_row,
-            ],
-            width=width,
-            height=height,
-            style=lambda: f"class:frame {self.style}",
-        )
+# 組合正則表達式
+regex = namelist_regex + "|" + cards_regex
+pattern = re.compile(regex, re.MULTILINE | re.DOTALL)
 
-    def __pt_container__(self) -> Container:
-        return self.container
-    
-if __name__ == "__main__":
-    from prompt_toolkit.widgets import TextArea
-    from prompt_toolkit import Application
-    from prompt_toolkit.layout import Layout
-    from prompt_toolkit.key_binding import KeyBindings
+result_dict = {}
 
-    content = TextArea(text="Interactive mode is enabled.\nparams:\ninput : (required)", width=10)
-    info_box = InformationFrame(
-        body=content,
-        title="Information",
-        style="fg:cyan",
-        width=40,
-    )
-    
-    kb = KeyBindings()
-    @kb.add("c-c")
-    def _(event):
-        event.app.exit()
+for match in pattern.finditer(text):
+    # Group 1: Namelist
+    if match.group(1): 
+        title = match.group(1).strip()
+        content = match.group(2).strip()
+        result_dict[title] = {
+            "type": "namelist",
+            "attribute": None,
+            "content": content
+        }
         
-    @kb.add("c")
-    def _(event):
-        info_box.style = "fg:green" if info_box.style == "fg:cyan" else "fg:cyan"
-        
-    app = Application(layout=Layout(info_box), full_screen=False, key_bindings=kb)
-    
-    app.run()
-    
-    
+    # Group 3: Cards (由於 Namelist 佔用了 Group 1, 2，這裡變成 Group 3 開始)
+    elif match.group(3): 
+        title = match.group(3).strip()
+        attribute = match.group(4).strip() if match.group(4) else None
+        content = match.group(5).strip()
+        result_dict[title] = {
+            "type": "card",
+            "attribute": attribute,
+            "content": content
+        }
+
+print("解析結果 Dict：\n")
+for k, v in result_dict.items():
+    print(f"[{k}]")
+    print(f"  Type:      {v['type']}")
+    print(f"  Attribute: {v['attribute']}")
+    print(f"  Content:\n{v['content']}")
+    print("-" * 20)
