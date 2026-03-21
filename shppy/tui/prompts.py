@@ -1,19 +1,14 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-import sys
-from functools import partial
 from typing import Any, Callable
 from collections import defaultdict
 from prompt_toolkit.application import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.layout import DynamicContainer, HSplit, Layout, VSplit, Window
+from prompt_toolkit.layout import HSplit, Layout, VSplit, Window
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
-from prompt_toolkit.widgets import TextArea, Frame
-from prompt_toolkit.formatted_text import FormattedText
-from prompt_toolkit.layout.containers import VerticalAlign, HorizontalAlign
+from prompt_toolkit.widgets import TextArea
 from prompt_toolkit.styles import Style
 from prompt_toolkit.shortcuts import print_container
 from prompt_toolkit.layout.dimension import Dimension as D
@@ -36,6 +31,8 @@ PROMPT_STYLE_DICT = {
     "input.active": "ansiwhite",
     "ghost": "ansibrightblack",
     "error": "bold ansired",
+    "choice": "ansibrightblack",
+    "choice.active": "ansiwhite",
 }
 
 class StepPromptBase:
@@ -294,6 +291,212 @@ class FillPrompt(StepPromptBase):
         return submitted_text
 
 
+class MultiSelectPrompt(StepPromptBase):
+    def __init__(self, title: str, options: list[str], selected: list[str] | None = None, style: Style | None = None):
+        super().__init__(style=style)
+        self.title = title
+        self.options = options
+        self.selected = selected or []
+
+    def run(
+        self,
+        error_message: str = "",
+        page_size: int = 6,
+        validator: Callable[[list[str]], tuple[bool, str]] | None = None,
+        min_selected: int | None = None,
+        max_selected: int | None = None,
+    ) -> list[str]:
+        self.state = "active"
+        left = self.build_left()
+        submitted_values = []
+        submitted = False
+        current_error = error_message
+        page_size = max(1, page_size)
+        if min_selected is not None:
+            min_selected = max(0, min_selected)
+        if max_selected is not None:
+            max_selected = max(0, max_selected)
+        if min_selected is not None and max_selected is not None and min_selected > max_selected:
+            raise ValueError("min_selected cannot be greater than max_selected.")
+        cursor_index = 0
+        selected_set = {item for item in self.selected if item in self.options}
+
+        title_row = Window(FormattedTextControl(lambda: [(self._parse("class:title"), self.title)]), height=1)
+
+        def _page_bounds() -> tuple[int, int]:
+            page_start = (cursor_index // page_size) * page_size
+            page_end = min(page_start + page_size, len(self.options))
+            return page_start, page_end
+
+        def _build_value_fragments():
+            if not self.options:
+                return [(self._parse("class:tail"), "(empty)")]
+
+            page_start, page_end = _page_bounds()
+            fragments = []
+            for idx in range(page_start, page_end):
+                value = self.options[idx]
+                style = "class:choice.active" if idx == cursor_index else "class:choice"
+                marker = "■" if value in selected_set else "□"
+                fragments.append((style, f"  {marker} {value}"))
+                if idx < page_end - 1:
+                    fragments.append(("", "\n"))
+            return fragments
+
+        def _build_tail_fragments():
+            if current_error:
+                return [(self._parse("class:error"), f"!! {current_error}")]
+
+            if not self.options:
+                return [(self._parse("class:tail"), "SPACE toggle  ENTER submit")]
+
+            page_start, page_end = _page_bounds()
+            total_pages = (len(self.options) + page_size - 1) // page_size
+            page_fragments = []
+            if total_pages > 1:
+                if page_start > 0:
+                    page_fragments.append((self._parse("class:tail"), "<  "))
+                page_fragments.append((self._parse("class:tail"), f"Page {(cursor_index // page_size) + 1}/{total_pages}"))
+                if page_end < len(self.options):
+                    page_fragments.append((self._parse("class:tail"), "  >"))
+                page_fragments.append((self._parse("class:tail"), "  ·  "))
+                page_fragments.append((self._parse("class:tail"), "UP/DOWN move  LEFT/RIGHT page  SPACE toggle  ENTER submit"))
+            else:
+                page_fragments.append((self._parse("class:tail"), "UP/DOWN move  SPACE toggle  ENTER submit"))
+            return page_fragments
+
+        value_row = Window(
+            FormattedTextControl(
+                _build_value_fragments
+            ),
+            height=D(min=1, max=page_size),
+            always_hide_cursor=True,
+        )
+
+        tail_row = Window(
+            FormattedTextControl(
+                _build_tail_fragments
+            ),
+            height=1,
+        )
+
+        right = HSplit([title_row, value_row, tail_row])
+        module = VSplit([left, right], padding=1)
+
+        kb = KeyBindings()
+
+        def _move_cursor(delta: int) -> None:
+            nonlocal cursor_index
+            if not self.options or delta == 0:
+                return
+            cursor_index = min(max(0, cursor_index + delta), len(self.options) - 1)
+
+        @kb.add("c-c")
+        def _(event) -> None:
+            self.state = ""
+            event.app.exit()
+            raise KeyboardInterrupt("Input cancelled by user.")
+
+        @kb.add("up")
+        def _(event) -> None:
+            _move_cursor(-1)
+            event.app.invalidate()
+
+        @kb.add("down")
+        def _(event) -> None:
+            _move_cursor(1)
+            event.app.invalidate()
+
+        @kb.add("left")
+        def _(event) -> None:
+            _move_cursor(-page_size)
+            event.app.invalidate()
+
+        @kb.add("right")
+        def _(event) -> None:
+            _move_cursor(page_size)
+            event.app.invalidate()
+
+        @kb.add("space")
+        def _(event) -> None:
+            nonlocal current_error
+            current_error = ""
+            if not self.options:
+                event.app.invalidate()
+                return
+            value = self.options[cursor_index]
+            if value in selected_set:
+                selected_set.remove(value)
+            else:
+                selected_set.add(value)
+            event.app.invalidate()
+
+        @kb.add("enter")
+        def _(event) -> None:
+            nonlocal submitted_values, current_error, submitted
+            candidate = [item for item in self.options if item in selected_set]
+            if min_selected is not None and len(candidate) < min_selected:
+                current_error = f"Select at least {min_selected} item(s)."
+                event.app.invalidate()
+                return
+            if max_selected is not None and len(candidate) > max_selected:
+                current_error = f"Select at most {max_selected} item(s)."
+                event.app.invalidate()
+                return
+            if validator is not None:
+                ok, message = validator(candidate)
+                if not ok:
+                    current_error = message
+                    event.app.invalidate()
+                    return
+            submitted_values = candidate
+            submitted = True
+            current_error = ""
+            self.state = ""
+            event.app.invalidate()
+            event.app.exit()
+
+        app = Application(
+            layout=Layout(
+                module,
+                focused_element=value_row,
+            ),
+            key_bindings=kb,
+            full_screen=False,
+            erase_when_done=True,
+            style=self.style,
+        )
+        app.run()
+
+        if submitted:
+            rows = [
+                VSplit([
+                    Window(FormattedTextControl(lambda: [(self._parse("class:grid"), "◇")]), width=1, height=1, dont_extend_width=True),
+                    Window(width=1),
+                    Window(FormattedTextControl(lambda: [(self._parse("class:title"), self.title)]), height=1),
+                ])
+            ]
+            for value in self.options:
+                marker = "■" if value in selected_set else "□"
+                rows.append(
+                    VSplit([
+                        Window(FormattedTextControl(lambda: [(self._parse("class:grid"), "│")]), width=1, height=1, dont_extend_width=True),
+                        Window(width=1),
+                        Window(FormattedTextControl(lambda v=value, m=marker: [("class:choice", f"  {m} {v}")]), height=1),
+                    ])
+                )
+            rows.append(
+                VSplit([
+                    Window(FormattedTextControl(lambda: [(self._parse("class:grid"), "│")]), width=1, height=1, dont_extend_width=True),
+                    Window(width=1),
+                    Window(FormattedTextControl(lambda: [("", "")]), height=1),
+                ])
+            )
+            print_container(HSplit(rows), style=self.style)
+
+        return submitted_values
+
+
 class InfoPrompt(StepPromptBase):
     def __init__(
         self,
@@ -369,3 +572,10 @@ class FinishPrompt(StepPromptBase):
         )
         module = VSplit([left, right], padding=1)
         print_container(module, style=self.style)
+        
+        
+if __name__ == "__main__":
+    prompt = MultiSelectPrompt("Select options", ["Option 1", "Option 2", "Option 3"], selected=["Option 2"])
+    result = prompt.run(min_selected=1)
+    FinishPrompt(True).run()
+    print("Selected:", result)
