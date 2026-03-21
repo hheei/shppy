@@ -424,14 +424,13 @@ class PWIn:
                 # ATOMIC_POSITIONS
                 symb = self.atoms.get_chemical_symbols()
                 f.write(f"ATOMIC_POSITIONS angstrom\n")
+                mask = self.atoms.arrays.get("mask", None)
                 for i, (s, pos) in enumerate(zip(symb, self.atoms.get_positions())):
-                    m = self.atoms.arrays["mask"][i]
-                        
                     f.write(f"  {s:3s} {pos[0]:16.12g} {pos[1]:16.12g} {pos[2]:16.12g}")
-                    if np.all(m):
+                    if mask is None or np.all(mask[i]):
                         f.write("\n")
                     else:
-                        f.write(f"    {int(m[0])} {int(m[1])} {int(m[2])}\n")
+                        f.write(f"    {int(mask[i,0])} {int(mask[i,1])} {int(mask[i,2])}\n")
                 f.write("\n")
 
                 # ATOMIC_VELOCITIES
