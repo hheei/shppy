@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from ase import io as ase_io
-from shppy.io import EspressoParser
+from shppy.io import XML
 import typer
 from shppy.tui.helper import (
     default_format_completer,
@@ -183,8 +183,8 @@ def run(
                 out_path = out_path.with_suffix(suffix)
 
         if in_format == "espresso-xml":
-            parser = EspressoParser(in_path)
-            images = parser.step_atoms(slice(None))
+            parser = XML(in_path)
+            images = parser.step.atoms
         else:
             images = ase_io.read(in_path, format=in_format, index=":")
 
