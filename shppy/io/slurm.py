@@ -7,19 +7,23 @@ from dataclasses import dataclass, field
 class Job:
     sbatch_params: dict[str, Any] = field(default_factory=dict)
 
-    init_script: list[str] = [
-        'if [ -z "${SLURM_JOB_ID}" ]; then',
-        '  echo "\${SLURM_JOB_ID} is not set."',
-        '  echo "Use `sbatch job.sh` to submit the job."',
-        "  return 0 2>/dev/null || exit 0",
-        "fi",
-        "export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}",
-        ". ~/.bashrc && module purge && cd ${SLURM_SUBMIT_DIR} && scck job init",
-    ]
+    init_script: list[str] = field(
+        default_factory=lambda: [
+            'if [ -z "${SLURM_JOB_ID}" ]; then',
+            '  echo "\${SLURM_JOB_ID} is not set."',
+            '  echo "Use `sbatch job.sh` to submit the job."',
+            "  return 0 2>/dev/null || exit 0",
+            "fi",
+            "export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}",
+            ". ~/.bashrc && module purge && cd ${SLURM_SUBMIT_DIR} && scck job init",
+        ]
+    )
 
-    opt_script: list[str] = ["# ulimit -Ss unlimited"]
+    opt_script: list[str] = field(default_factory=lambda: ["# ulimit -Ss unlimited"])
 
-    run_script: list[str] = ["# mpirun -np ${SLURM_NTASKS} ..."]
+    run_script: list[str] = field(
+        default_factory=lambda: ["# mpirun -np ${SLURM_NTASKS} ..."]
+    )
 
     @classmethod
     def read(cls, path):
