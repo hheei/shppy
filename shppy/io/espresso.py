@@ -175,7 +175,7 @@ class XMLIn:
         self.ions = dic.pop("ion_control", {})
         
         d = dic.pop("atomic_species")
-        self.atomic_species = [(at["@name"], float(at["mass"]), Path(path).parents[2] / self.control["pseudo_dir"] / at["pseudo_file"]) for at in d["species"]]
+        self.atomic_species = [(at["@name"], float(at["mass"]), Path(path).resolve().parents[2] / self.control["pseudo_dir"] / at["pseudo_file"]) for at in d["species"]]
         self.k_points = dic.pop("k_points_IBZ", {})
         self.bc = dic.pop("boundary_conditions", {})
         # atoms
@@ -233,7 +233,7 @@ class XMLOut:
         self.total_energy = {k: float(v) * HA2EV for k, v in dic.pop("total_energy", {}).items()}
         
         d = dic.pop("atomic_species")
-        self.atomic_species = [(at["@name"], float(at["mass"]), Path(path).parents[2] / d["@pseudo_dir"] / at["pseudo_file"]) for at in d["species"]]
+        self.atomic_species = [(at["@name"], float(at["mass"]), Path(path).resolve().parents[2] / d["@pseudo_dir"] / at["pseudo_file"]) for at in d["species"]]
         self.atoms = _from_atomic_structure(dic.pop("atomic_structure"))
         
         d = dic.pop("band_structure")
@@ -511,7 +511,7 @@ class PPIn:
                 data = getattr(self, nm)
                 if not data:
                     continue
-                MAXLEN = max(data.keys(), key=len)
+                MAXLEN = len(max(data.keys(), key=len))
                 f.write(f"&{nm.upper()}\n")
                 for k, v in sorted(getattr(self, nm).items(), key=lambda x: x[0]):
                     f.write(f"  {k:<{MAXLEN}} = {_format_scalar(v)}\n")
