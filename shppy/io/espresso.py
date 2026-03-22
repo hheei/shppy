@@ -12,6 +12,8 @@ _RE_FLOAT = re.compile(r"^[+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eEdD][+-]?\d+)?$")
 _RE_BOOL_T = re.compile(r"(?i)^\.?T(RUE)?\.?$")
 _RE_BOOL_F = re.compile(r"(?i)^\.?F(ALSE)?\.?$")
 B2A = 0.529177210903
+AUT2FS = 2.4188843265857e-2
+RY2EV = 13.605693122994
 HA2EV = 27.211386245988
 
 def _format_scalar(value) -> str:
@@ -247,6 +249,7 @@ class XMLOut:
         )
         
         d = dic.pop("forces")
+        # Ha/a.u. -> eV/Å
         self.atoms.set_array("forces", np.fromstring(d["#text"], sep="\n").reshape(-1, 3) * HA2EV / B2A)
         
         d = dic.pop("stress")
@@ -353,6 +356,7 @@ class PWIn:
         dic["atoms"] = atoms
 
         # ATOMIC_FORCES
+        # Ry/a.u. -> eV/Å
         data = dic.pop("atomic_forces", None)
         if data is not None:
             forces = []
@@ -364,9 +368,11 @@ class PWIn:
                 forces.append((float(fx), float(fy), float(fz)))
 
             forces = np.array(forces)
+            forces *= RY2EV / B2A
             atoms.set_array("forces", forces)
 
         # ATOMIC_VELOCITIES
+        # Bohr/AUT -> Å/fs
         data = dic.pop("atomic_velocities", None)
         if data is not None:
             velocities = []
@@ -378,6 +384,7 @@ class PWIn:
                 velocities.append((float(vx), float(vy), float(vz)))
 
             velocities = np.array(velocities)
+            velocities *= B2A / AUT2FS
             atoms.set_velocities(velocities)
 
         return cls(**dic)
@@ -438,7 +445,7 @@ class PWIn:
                 # ATOMIC_VELOCITIES
                 if "momenta" in self.atoms.arrays:
                     f.write(f"ATOMIC_VELOCITIES\n")
-                    m = self.atoms.get_velocities()
+                    m = self.atoms.get_velocities() * AUT2FS / B2A
                     for s, vec in zip(symb, m):
                         f.write(
                             f"  {s:3s} {vec[0]:16.12g} {vec[1]:16.12g} {vec[2]:16.12g}\n"
@@ -446,16 +453,13 @@ class PWIn:
                     f.write("\n")
 
                 # ATOMIC_FORCES
+                # eV/Å -> Ry/a.u.
                 if "forces" in self.atoms.arrays:
+                    forces = self.atoms.arrays["forces"] / RY2EV * B2A
                     f.write("ATOMIC_FORCES\n")
-                    for i, (s, force) in enumerate(
-                        zip(
-                            self.atoms.get_chemical_symbols(),
-                            self.atoms.arrays["forces"],
-                        )
-                    ):
+                    for i, s in enumerate(self.atoms.get_chemical_symbols()):
                         f.write(
-                            f"  {s:3s} {force[0]:16.12g} {force[1]:16.12g} {force[2]:16.12g}\n"
+                            f"  {s:3s} {forces[i,0]:16.12g} {forces[i,1]:16.12g} {forces[i,2]:16.12g}\n"
                         )
                     f.write("\n")
 
