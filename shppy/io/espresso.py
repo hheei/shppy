@@ -189,6 +189,8 @@ class XMLIn:
 class XMLStep:
     def __init__(self, path, data: list[dict[str, dict[str, Any]]]):
         ca, nss, se, atoms, te, st = [], [], [], [], {}, []
+        if not isinstance(data, list):
+            data = [data]
         for dat in data:
             scf = dat["scf_conv"]
             ca.append(scf["convergence_achieved"])
