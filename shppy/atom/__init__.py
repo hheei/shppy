@@ -1,5 +1,7 @@
-from typing import cast, Optional
+from typing import cast, Optional, overload, Union, Sequence
+import numpy as np
 from ase import Atoms as ase_Atoms
+from ase import Atom
 from ase.io import read, write
 
 
@@ -14,6 +16,15 @@ class Atoms(ase_Atoms):
     @classmethod
     def read_traj(cls, filename, index = slice(None), format:Optional[str] = None):
         return AtomsList.read(filename, index=index, format=format)
+
+    @overload
+    def __getitem__(self, i: Union[int, np.integer]) -> Atom: ...
+    
+    @overload
+    def __getitem__(self, i: Union[Sequence, slice, np.ndarray]) -> "Atoms": ...
+    
+    def __getitem__(self, i):
+        return super().__getitem__(i)
 
 class AtomsList:
     def __init__(self, atoms_list):
