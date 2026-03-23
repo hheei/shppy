@@ -1,5 +1,5 @@
 from shppy._core import add_floats, square
-from shppy.atom import Atoms
+from shppy.atom import Atoms, AtomsList
 from shppy.shell import Shell
 
 if __name__ == "__main__":

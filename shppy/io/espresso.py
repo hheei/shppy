@@ -2,7 +2,7 @@ import xmltodict as x2d
 import shlex
 import numpy as np
 import re
-from shppy import Atoms
+from shppy.atom import Atoms, AtomsList
 from pathlib import Path
 from typing import overload, Any, Optional
 from dataclasses import dataclass, field
@@ -161,8 +161,8 @@ class XML:
         self.step = XMLStep(path, dic["step"])
         self.out = XMLOut(path, dic["output"])
     
-    def traj(self) -> list[Atoms]:
-        return [self.inp.atoms, *self.step.atoms, self.out.atoms]
+    def traj(self) -> AtomsList:
+        return AtomsList([self.inp.atoms, *self.step.atoms, self.out.atoms])
     
     
     
