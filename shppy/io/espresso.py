@@ -486,6 +486,12 @@ class PWIn:
                 f.write(f"HUBBARD {self.hubbard_mode}\n")
                 f.write(self.hubbard)
                 f.write("\n")
+                
+    def __setattr__(self, prop, val):
+        if prop == "atoms":
+            self.control["nat"] = len(val)
+            self.control["ntyp"] = len(set(val.get_chemical_symbols()))
+        super().__setattr__(prop, val)
 
 
 @dataclass
