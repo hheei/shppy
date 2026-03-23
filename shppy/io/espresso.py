@@ -522,3 +522,7 @@ class PPIn:
                 for k, v in sorted(getattr(self, nm).items(), key=lambda x: x[0]):
                     f.write(f"  {k:<{MAXLEN}} = {_format_scalar(v)}\n")
                 f.write("/\n")
+                
+    @classmethod
+    def locpot(cls):
+        return cls(inputpp={"outdir": "./out/", "plot_num": 11, "prefix": "pwscf"}, plot={"fileout": "QE_LOCPOT.cube", "iflag": 3, "output_format": 6})
