@@ -35,9 +35,9 @@ def make(
     
     with open(pth, "w") as f:
         f.write( "#!/bin/bash\n"
-                 "#SBATCH --partition={partition}\n"
+                f"#SBATCH --partition={partition}\n"
                  "#SBATCH --job-name=ShppyJob\n"
-                 "#SBATCH --nodes=1\n"
+                 "#SBATCH --nodes=1\n"  
                 f"#SBATCH --ntasks-per-node={ntasks_per_node}\n"
                 f"#SBATCH --time={time}\n"
                 f"#SBATCH --mem-per-cpu={mem_per_cpu}M\n"
@@ -50,7 +50,7 @@ def make(
                 "#SBATCH --error=slurm-%j.err\n"
                 "\n"
                 "shppy job init\n"
-                "source ~/.bashrc && module purge && cd \\$SLURM_SUBMIT_DIR\n"
+                "source ~/.bashrc && module purge && cd ${SLURM_SUBMIT_DIR}\n"
         )
     
     FinishPrompt(True, "Success!").run()
