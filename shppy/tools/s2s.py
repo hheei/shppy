@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from ase import io as ase_io
-from shppy.io import XML
+from shppy.io.espresso import XML
 import typer
 from shppy.tui.helper import (
     default_format_completer,
