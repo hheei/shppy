@@ -257,7 +257,6 @@ class XMLOut:
         
         self.data = dic
         
-
 @dataclass
 class PWIn:
     control: dict[str, Any]
@@ -420,13 +419,13 @@ class PWIn:
             # CELL_PARAMETERS
             f.write(f"CELL_PARAMETERS angstrom\n")
             for vec in self.atoms.cell.array:
-                f.write(f"  {vec[0]:16.12g} {vec[1]:16.12g} {vec[2]:16.12g}\n")
+                f.write(f"{vec[0]:18.10g} {vec[1]:18.10g} {vec[2]:18.10g}\n")
             f.write("\n")
 
             # ATOMIC_SPECIES
             f.write("ATOMIC_SPECIES\n")
             for s, m, p in self.atomic_species:
-                f.write(f"  {s:3s} {m:16.12g} {p}\n")
+                f.write(f"{s:10s} {m:18.10g} {p}\n")
             f.write("\n")
 
             if len(self.atoms) > 0:
@@ -435,11 +434,11 @@ class PWIn:
                 f.write(f"ATOMIC_POSITIONS angstrom\n")
                 mask = self.atoms.arrays.get("mask", None)
                 for i, (s, pos) in enumerate(zip(symb, self.atoms.get_positions())):
-                    f.write(f"  {s:3s} {pos[0]:16.12g} {pos[1]:16.12g} {pos[2]:16.12g}")
+                    f.write(f"{s:10s} {pos[0]:18.10g} {pos[1]:18.10g} {pos[2]:18.10g}")
                     if mask is None or np.all(mask[i]):
                         f.write("\n")
                     else:
-                        f.write(f"    {int(mask[i,0])} {int(mask[i,1])} {int(mask[i,2])}\n")
+                        f.write(f" {int(mask[i,0]):3d} {int(mask[i,1]):3d} {int(mask[i,2]):3d}\n")
                 f.write("\n")
 
                 # ATOMIC_VELOCITIES
@@ -448,7 +447,7 @@ class PWIn:
                     m = self.atoms.get_velocities() * AUT2FS / B2A
                     for s, vec in zip(symb, m):
                         f.write(
-                            f"  {s:3s} {vec[0]:16.12g} {vec[1]:16.12g} {vec[2]:16.12g}\n"
+                            f"{s:10s} {vec[0]:18.10g} {vec[1]:18.10g} {vec[2]:18.10g}\n"
                         )
                     f.write("\n")
 
@@ -459,7 +458,7 @@ class PWIn:
                     f.write("ATOMIC_FORCES\n")
                     for i, s in enumerate(self.atoms.get_chemical_symbols()):
                         f.write(
-                            f"  {s:3s} {forces[i,0]:16.12g} {forces[i,1]:16.12g} {forces[i,2]:16.12g}\n"
+                            f"{s:10s} {forces[i,0]:18.10g} {forces[i,1]:18.10g} {forces[i,2]:18.10g}\n"
                         )
                     f.write("\n")
 
@@ -489,8 +488,8 @@ class PWIn:
                 
     def __setattr__(self, prop, val):
         if prop == "atoms":
-            self.control["nat"] = len(val)
-            self.control["ntyp"] = len(set(val.get_chemical_symbols()))
+            self.system["nat"] = len(val)
+            self.system["ntyp"] = len(set(val.get_chemical_symbols()))
         super().__setattr__(prop, val)
 
 
@@ -521,7 +520,7 @@ class PPIn:
                 f.write(f"&{nm.upper()}\n")
                 for k, v in sorted(getattr(self, nm).items(), key=lambda x: x[0]):
                     f.write(f"  {k:<{MAXLEN}} = {_format_scalar(v)}\n")
-                f.write("/\n")
+                f.write("/\n\n")
                 
     @classmethod
     def locpot(cls):
