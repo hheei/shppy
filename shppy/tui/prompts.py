@@ -26,6 +26,7 @@ PROMPT_STYLE_DICT = {
     "value.error": "bold ansired",
     "mark": "ansibrightcyan",
     "tail": "ansibrightblack",
+    "tail.inactive": "ansibrightblack",
     "tail.active": "ansibrightcyan",
     "input": "ansibrightblack",
     "input.active": "ansiwhite",
@@ -121,7 +122,7 @@ class FillPrompt(StepPromptBase):
         submitted_text = ""
         cancelled = False
         current_error = error_message
-        max_completion_items = 6
+        max_completion_items = 5
 
         def _clear_error_on_change(_) -> None:
             nonlocal current_error
@@ -145,34 +146,41 @@ class FillPrompt(StepPromptBase):
             complete_state = input_buffer.complete_state
             completions = list(getattr(complete_state, "completions", []) or []) if complete_state is not None else []
             if not completions:
-                return [("", "")]
+                return [(self._parse("class:tail.inactive"), "")]
 
             complete_index = getattr(complete_state, "complete_index", None)
             if complete_index is None or complete_index < 0:
-                page_start = 0
-            else:
+                complete_index = 0
+
+            has_pagination = len(completions) > max_completion_items
+            page_start = 0
+            page_end = len(completions)
+            if has_pagination:
                 page_start = (complete_index // max_completion_items) * max_completion_items
+                page_end = min(page_start + max_completion_items, len(completions))
 
-            page_end = min(page_start + max_completion_items, len(completions))
             visible = completions[page_start:page_end]
-
             fragments = []
-            if page_start > 0:
-                fragments.append((self._parse("class:tail"), "< "))
+
+            if has_pagination:
+                total_pages = (len(completions) + max_completion_items - 1) // max_completion_items
+                current_page = (complete_index // max_completion_items) + 1
+                fragments.append((self._parse("class:tail.inactive"), f"[{current_page:02d}/{total_pages:02d}] < "))
 
             for idx, completion in enumerate(visible):
                 actual_index = page_start + idx
                 text = _shorten_item(completion.display_text or completion.text)
-                if idx > 0 or page_start > 0:
-                    fragments.append((self._parse("class:tail"), "  "))
+                if idx > 0:
+                    fragments.append((self._parse("class:tail.inactive"), "  "))
 
                 if complete_index == actual_index:
-                    fragments.append((self._parse("class:mark"), f"[{text}]"))
+                    fragments.append((self._parse("class:input.active"), text))
                 else:
-                    fragments.append((self._parse("class:tail"), text))
+                    fragments.append((self._parse("class:tail.inactive"), text))
 
-            if page_end < len(completions):
-                fragments.append((self._parse("class:tail"), "  >"))
+            if has_pagination:
+                fragments.append((self._parse("class:tail.inactive"), " >"))
+
             return fragments
 
         tail_row = Window(
@@ -211,12 +219,14 @@ class FillPrompt(StepPromptBase):
         @kb.add("up")
         def _(event) -> None:
             if input_buffer.complete_state is not None:
-                _move_completion(-max_completion_items)
+                step = max_completion_items if len(getattr(input_buffer.complete_state, "completions", []) or []) > max_completion_items else 1
+                _move_completion(-step)
 
         @kb.add("down")
         def _(event) -> None:
             if input_buffer.complete_state is not None:
-                _move_completion(max_completion_items)
+                step = max_completion_items if len(getattr(input_buffer.complete_state, "completions", []) or []) > max_completion_items else 1
+                _move_completion(step)
 
         @kb.add("tab")
         def _(event) -> None:
@@ -320,6 +330,11 @@ class MultiSelectPrompt(StepPromptBase):
             raise ValueError("min_selected cannot be greater than max_selected.")
         cursor_index = 0
         selected_set = {item for item in self.selected if item in self.options}
+        if max_selected == 1 and len(selected_set) > 1:
+            for item in self.options:
+                if item in selected_set:
+                    selected_set = {item}
+                    break
 
         title_row = Window(FormattedTextControl(lambda: [(self._parse("class:title"), self.title)]), height=1)
 
@@ -428,6 +443,8 @@ class MultiSelectPrompt(StepPromptBase):
             if value in selected_set:
                 selected_set.remove(value)
             else:
+                if max_selected == 1:
+                    selected_set.clear()
                 selected_set.add(value)
             event.app.invalidate()
 

@@ -27,7 +27,9 @@ class Atoms(ase_Atoms):
         return super().__getitem__(i)
 
 class AtomsList:
-    def __init__(self, atoms_list):
+    def __init__(self, atoms_list: Atoms | list[Atoms]):
+        if not isinstance(atoms_list, list):
+            atoms_list = [atoms_list]
         for atoms in atoms_list:
             if isinstance(atoms, ase_Atoms):
                 atoms.__class__ = Atoms
@@ -37,10 +39,13 @@ class AtomsList:
     @classmethod
     def read(cls, filename, index = slice(None), format:Optional[str] = None):
         atoms_list = read(filename, index = index, format=format)
-        return cls(atoms_list)
+        return cls(atoms_list) # type: ignore
     
     def write(self, filename, format:Optional[str] = None):
-        write(filename, self.atoms_list, format=format) # type: ignore
+        if len(self.atoms_list) == 1:
+            self.atoms_list[0].write(filename, format=format)
+        else:
+            write(filename, self.atoms_list, format=format) # type: ignore
 
     def __getitem__(self, key):
         return self.atoms_list[key]

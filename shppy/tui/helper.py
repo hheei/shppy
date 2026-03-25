@@ -8,8 +8,7 @@ def default_path_completer() -> PathCompleter:
     return PathCompleter(expanduser=True)
 
 
-def default_format_completer() -> WordCompleter:
-    return WordCompleter(DEFAULT_FORMAT_OPTIONS, ignore_case=True)
+
 
 
 def validate_existing_path(text: str) -> tuple[bool, str, Path | None]:
