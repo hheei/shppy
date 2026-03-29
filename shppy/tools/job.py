@@ -21,10 +21,10 @@ def make(
     
     partition = input_partitions(partition, sh)
     
-    r  = sh.run(f'sinfo -p {partition} -h -o "%l %m %c %G"').out.strip().split()
+    r  = sh.run(f'sinfo -p {partition} -h -o "%l %e %c %G"').out.strip().split()
     time, mem, cpus, gres = r
     
-    mem_per_cpu = int(int(mem) / int(cpus) / 1000) * 1000
+    mem_per_cpu = int(int(mem.split("-")[1]) / int(cpus) / 1000) * 1000
     
     if gres == "(null)":
         ntasks_per_node = int(cpus)
@@ -84,8 +84,8 @@ def init(
     
     Path(s_dir / "slurm.out").symlink_to(f"slurm-{job_id}.out")
     Path(s_dir / "slurm.err").symlink_to(f"slurm-{job_id}.err")
-    Path(g_dir / f"slurm-{job_id}.out").symlink_to(g_dir.relative_to(s_dir) / f"slurm-{job_id}.out")
-    Path(g_dir / f"slurm-{job_id}.err").symlink_to(g_dir.relative_to(s_dir) / f"slurm-{job_id}.err")
+    Path(g_dir / f"slurm-{job_id}.out").symlink_to(f"slurm-{job_id}.out")
+    Path(g_dir / f"slurm-{job_id}.err").symlink_to(f"slurm-{job_id}.err")
 
 if __name__ == "__main__":
     app()
