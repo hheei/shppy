@@ -1,8 +1,11 @@
 from pathlib import Path
 from typing import Optional
+
 from prompt_toolkit.completion import PathCompleter
-from shppy.tui.prompts import InfoPrompt, MultiSelectPrompt, FinishPrompt, FillPrompt
+
 from shppy.shell import Shell
+from shppy.tui.prompts import FillPrompt, FinishPrompt, MultiSelectPrompt
+
 
 def input_partitions(inp: Optional[str], shell: Shell):
     avail = shell.run("sinfo -h -o '%P'").out.split()

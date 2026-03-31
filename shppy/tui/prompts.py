@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Any, Callable
 from collections import defaultdict
+from typing import Any, Callable
+
 from prompt_toolkit.application import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import HSplit, Layout, VSplit, Window
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
-from prompt_toolkit.widgets import TextArea
-from prompt_toolkit.styles import Style
-from prompt_toolkit.shortcuts import print_container
 from prompt_toolkit.layout.dimension import Dimension as D
+from prompt_toolkit.shortcuts import print_container
+from prompt_toolkit.styles import Style
 from prompt_toolkit.utils import get_cwidth
+from prompt_toolkit.widgets import TextArea
+
 from shppy.tui.helper import GhostTextProcessor
 
 PROMPT_STYLE_DICT = {
@@ -36,13 +38,15 @@ PROMPT_STYLE_DICT = {
     "choice.active": "ansiwhite",
 }
 
+
 class StepPromptBase:
-    def __init__(self, 
-                 vertical = {"": "│", "active": "│"}, 
-                 top_left = {"": "◇", "active": "◆"}, 
-                 low_left = {"": "│", "active": "└"},
-                 style: Style | None = None
-                 ):
+    def __init__(
+        self,
+        vertical={"": "│", "active": "│"},
+        top_left={"": "◇", "active": "◆"},
+        low_left={"": "│", "active": "└"},
+        style: Style | None = None,
+    ):
         self.state = ""
         self.vertical = vertical
         self.top_left = top_left
@@ -51,21 +55,35 @@ class StepPromptBase:
             self.style = Style.from_dict(PROMPT_STYLE_DICT)
         else:
             self.style = style
-        
+
     def run(self) -> Any:
         pass
 
     def build_left(self, h: int = 1):
         grid_style_fn = lambda: self._parse("class:grid")
-        module = HSplit([
-            Window(height=1,char=lambda: self.top_left[self.state], style = grid_style_fn),
-            Window(height=D(min=h), char=lambda: self.vertical[self.state], style = grid_style_fn),
-            Window(height=1,char=lambda: self.low_left[self.state], style = grid_style_fn),
-        ],
-                        width=1)
-        
+        module = HSplit(
+            [
+                Window(
+                    height=1,
+                    char=lambda: self.top_left[self.state],
+                    style=grid_style_fn,
+                ),
+                Window(
+                    height=D(min=h),
+                    char=lambda: self.vertical[self.state],
+                    style=grid_style_fn,
+                ),
+                Window(
+                    height=1,
+                    char=lambda: self.low_left[self.state],
+                    style=grid_style_fn,
+                ),
+            ],
+            width=1,
+        )
+
         return module
-    
+
     def _parse(self, key):
         base = key[6:] if key.startswith("class:") else key
         if f"{base}.{self.state}" in PROMPT_STYLE_DICT:
@@ -74,21 +92,28 @@ class StepPromptBase:
             return f"class:{base}"
         return key
 
+
 class TitlePrompt(StepPromptBase):
-    def __init__(self, 
-                 title, 
-                 top_left=defaultdict(lambda: "┌"), 
-                 low_left=defaultdict(lambda: "│"),
-                 style: Style | None = None
-                 ):
+    def __init__(
+        self,
+        title,
+        top_left=defaultdict(lambda: "┌"),
+        low_left=defaultdict(lambda: "│"),
+        style: Style | None = None,
+    ):
         super().__init__(top_left=top_left, low_left=low_left, style=style)
         self.title = title
 
     def run(self):
         left = self.build_left(h=0)
-        mid = Window(FormattedTextControl(lambda: [(self._parse("class:title.active"), self.title)]))
-        module = VSplit([left,mid], padding=1)
+        mid = Window(
+            FormattedTextControl(
+                lambda: [(self._parse("class:title.active"), self.title)]
+            )
+        )
+        module = VSplit([left, mid], padding=1)
         print_container(module, style=self.style)
+
 
 class FillPrompt(StepPromptBase):
     def __init__(
@@ -110,15 +135,23 @@ class FillPrompt(StepPromptBase):
     ) -> str:
         self.state = "active"
         left = self.build_left()
-        
-        input_buffer = Buffer(completer=completer or DummyCompleter(), complete_while_typing=True)
+
+        input_buffer = Buffer(
+            completer=completer or DummyCompleter(), complete_while_typing=True
+        )
         input_buffer.text = self.value
         input_buffer.cursor_position = len(input_buffer.text)
         input_control = BufferControl(
             buffer=input_buffer,
-            input_processors=[GhostTextProcessor(lambda: (ghost or "").strip() if not input_buffer.text else "")],
+            input_processors=[
+                GhostTextProcessor(
+                    lambda: (ghost or "").strip() if not input_buffer.text else ""
+                )
+            ],
         )
-        value_row = Window(content=input_control, height=1, style=lambda: self._parse("class:input"))
+        value_row = Window(
+            content=input_control, height=1, style=lambda: self._parse("class:input")
+        )
         submitted_text = ""
         cancelled = False
         current_error = error_message
@@ -144,7 +177,11 @@ class FillPrompt(StepPromptBase):
                 return text if len(text) <= 14 else f"{text[:12]}..."
 
             complete_state = input_buffer.complete_state
-            completions = list(getattr(complete_state, "completions", []) or []) if complete_state is not None else []
+            completions = (
+                list(getattr(complete_state, "completions", []) or [])
+                if complete_state is not None
+                else []
+            )
             if not completions:
                 return [(self._parse("class:tail.inactive"), "")]
 
@@ -156,16 +193,25 @@ class FillPrompt(StepPromptBase):
             page_start = 0
             page_end = len(completions)
             if has_pagination:
-                page_start = (complete_index // max_completion_items) * max_completion_items
+                page_start = (
+                    complete_index // max_completion_items
+                ) * max_completion_items
                 page_end = min(page_start + max_completion_items, len(completions))
 
             visible = completions[page_start:page_end]
             fragments = []
 
             if has_pagination:
-                total_pages = (len(completions) + max_completion_items - 1) // max_completion_items
+                total_pages = (
+                    len(completions) + max_completion_items - 1
+                ) // max_completion_items
                 current_page = (complete_index // max_completion_items) + 1
-                fragments.append((self._parse("class:tail.inactive"), f"[{current_page:02d}/{total_pages:02d}] < "))
+                fragments.append(
+                    (
+                        self._parse("class:tail.inactive"),
+                        f"[{current_page:02d}/{total_pages:02d}] < ",
+                    )
+                )
 
             for idx, completion in enumerate(visible):
                 actual_index = page_start + idx
@@ -189,7 +235,7 @@ class FillPrompt(StepPromptBase):
         )
 
         right = HSplit([title_row, value_row, tail_row])
-        
+
         module = VSplit([left, right], padding=1)
 
         kb = KeyBindings()
@@ -203,7 +249,11 @@ class FillPrompt(StepPromptBase):
                 if input_buffer.complete_state is None:
                     return
 
-            move = input_buffer.complete_next if delta > 0 else input_buffer.complete_previous
+            move = (
+                input_buffer.complete_next
+                if delta > 0
+                else input_buffer.complete_previous
+            )
             for _ in range(abs(delta)):
                 move()
 
@@ -219,13 +269,27 @@ class FillPrompt(StepPromptBase):
         @kb.add("up")
         def _(event) -> None:
             if input_buffer.complete_state is not None:
-                step = max_completion_items if len(getattr(input_buffer.complete_state, "completions", []) or []) > max_completion_items else 1
+                step = (
+                    max_completion_items
+                    if len(
+                        getattr(input_buffer.complete_state, "completions", []) or []
+                    )
+                    > max_completion_items
+                    else 1
+                )
                 _move_completion(-step)
 
         @kb.add("down")
         def _(event) -> None:
             if input_buffer.complete_state is not None:
-                step = max_completion_items if len(getattr(input_buffer.complete_state, "completions", []) or []) > max_completion_items else 1
+                step = (
+                    max_completion_items
+                    if len(
+                        getattr(input_buffer.complete_state, "completions", []) or []
+                    )
+                    > max_completion_items
+                    else 1
+                )
                 _move_completion(step)
 
         @kb.add("tab")
@@ -267,7 +331,10 @@ class FillPrompt(StepPromptBase):
             nonlocal submitted_text, current_error
 
             complete_state = input_buffer.complete_state
-            if complete_state is not None and complete_state.current_completion is not None:
+            if (
+                complete_state is not None
+                and complete_state.current_completion is not None
+            ):
                 input_buffer.apply_completion(complete_state.current_completion)
 
             candidate = input_buffer.text.strip()
@@ -297,12 +364,18 @@ class FillPrompt(StepPromptBase):
         )
         app.run()
         input_buffer.cancel_completion()
-        
+
         return submitted_text
 
 
 class MultiSelectPrompt(StepPromptBase):
-    def __init__(self, title: str, options: list[str], selected: list[str] | None = None, style: Style | None = None):
+    def __init__(
+        self,
+        title: str,
+        options: list[str],
+        selected: list[str] | None = None,
+        style: Style | None = None,
+    ):
         super().__init__(style=style)
         self.title = title
         self.options = options
@@ -326,7 +399,11 @@ class MultiSelectPrompt(StepPromptBase):
             min_selected = max(0, min_selected)
         if max_selected is not None:
             max_selected = max(0, max_selected)
-        if min_selected is not None and max_selected is not None and min_selected > max_selected:
+        if (
+            min_selected is not None
+            and max_selected is not None
+            and min_selected > max_selected
+        ):
             raise ValueError("min_selected cannot be greater than max_selected.")
         cursor_index = 0
         selected_set = {item for item in self.selected if item in self.options}
@@ -336,7 +413,10 @@ class MultiSelectPrompt(StepPromptBase):
                     selected_set = {item}
                     break
 
-        title_row = Window(FormattedTextControl(lambda: [(self._parse("class:title"), self.title)]), height=1)
+        title_row = Window(
+            FormattedTextControl(lambda: [(self._parse("class:title"), self.title)]),
+            height=1,
+        )
 
         def _page_bounds() -> tuple[int, int]:
             page_start = (cursor_index // page_size) * page_size
@@ -371,27 +451,38 @@ class MultiSelectPrompt(StepPromptBase):
             if total_pages > 1:
                 if page_start > 0:
                     page_fragments.append((self._parse("class:tail"), "<  "))
-                page_fragments.append((self._parse("class:tail"), f"Page {(cursor_index // page_size) + 1}/{total_pages}"))
+                page_fragments.append(
+                    (
+                        self._parse("class:tail"),
+                        f"Page {(cursor_index // page_size) + 1}/{total_pages}",
+                    )
+                )
                 if page_end < len(self.options):
                     page_fragments.append((self._parse("class:tail"), "  >"))
                 page_fragments.append((self._parse("class:tail"), "  ·  "))
-                page_fragments.append((self._parse("class:tail"), "UP/DOWN move  LEFT/RIGHT page  SPACE toggle  ENTER submit"))
+                page_fragments.append(
+                    (
+                        self._parse("class:tail"),
+                        "UP/DOWN move  LEFT/RIGHT page  SPACE toggle  ENTER submit",
+                    )
+                )
             else:
-                page_fragments.append((self._parse("class:tail"), "UP/DOWN move  SPACE toggle  ENTER submit"))
+                page_fragments.append(
+                    (
+                        self._parse("class:tail"),
+                        "UP/DOWN move  SPACE toggle  ENTER submit",
+                    )
+                )
             return page_fragments
 
         value_row = Window(
-            FormattedTextControl(
-                _build_value_fragments
-            ),
+            FormattedTextControl(_build_value_fragments),
             height=D(min=1, max=page_size),
             always_hide_cursor=True,
         )
 
         tail_row = Window(
-            FormattedTextControl(
-                _build_tail_fragments
-            ),
+            FormattedTextControl(_build_tail_fragments),
             height=1,
         )
 
@@ -487,27 +578,66 @@ class MultiSelectPrompt(StepPromptBase):
 
         if submitted:
             rows = [
-                VSplit([
-                    Window(FormattedTextControl(lambda: [(self._parse("class:grid"), "◇")]), width=1, height=1, dont_extend_width=True),
-                    Window(width=1),
-                    Window(FormattedTextControl(lambda: [(self._parse("class:title"), self.title)]), height=1),
-                ])
+                VSplit(
+                    [
+                        Window(
+                            FormattedTextControl(
+                                lambda: [(self._parse("class:grid"), "◇")]
+                            ),
+                            width=1,
+                            height=1,
+                            dont_extend_width=True,
+                        ),
+                        Window(width=1),
+                        Window(
+                            FormattedTextControl(
+                                lambda: [(self._parse("class:title"), self.title)]
+                            ),
+                            height=1,
+                        ),
+                    ]
+                )
             ]
             for value in self.options:
                 marker = "■" if value in selected_set else "□"
                 rows.append(
-                    VSplit([
-                        Window(FormattedTextControl(lambda: [(self._parse("class:grid"), "│")]), width=1, height=1, dont_extend_width=True),
-                        Window(width=1),
-                        Window(FormattedTextControl(lambda v=value, m=marker: [("class:choice", f"  {m} {v}")]), height=1),
-                    ])
+                    VSplit(
+                        [
+                            Window(
+                                FormattedTextControl(
+                                    lambda: [(self._parse("class:grid"), "│")]
+                                ),
+                                width=1,
+                                height=1,
+                                dont_extend_width=True,
+                            ),
+                            Window(width=1),
+                            Window(
+                                FormattedTextControl(
+                                    lambda v=value, m=marker: [
+                                        ("class:choice", f"  {m} {v}")
+                                    ]
+                                ),
+                                height=1,
+                            ),
+                        ]
+                    )
                 )
             rows.append(
-                VSplit([
-                    Window(FormattedTextControl(lambda: [(self._parse("class:grid"), "│")]), width=1, height=1, dont_extend_width=True),
-                    Window(width=1),
-                    Window(FormattedTextControl(lambda: [("", "")]), height=1),
-                ])
+                VSplit(
+                    [
+                        Window(
+                            FormattedTextControl(
+                                lambda: [(self._parse("class:grid"), "│")]
+                            ),
+                            width=1,
+                            height=1,
+                            dont_extend_width=True,
+                        ),
+                        Window(width=1),
+                        Window(FormattedTextControl(lambda: [("", "")]), height=1),
+                    ]
+                )
             )
             print_container(HSplit(rows), style=self.style)
 
@@ -537,29 +667,61 @@ class InfoPrompt(StepPromptBase):
         title_tail = max(1, inner_width + self.padding_right - get_cwidth(self.title))
 
         grid_sty = lambda: self._parse("class:grid")
-        top = VSplit([
-            Window(height=1, width=1, char=lambda: self.top_left[self.state], style=grid_sty),
-            Window(width=1), # padding
-            Window(FormattedTextControl(lambda: [(self._parse("class:title"), self.title)]), dont_extend_width=True),
-            Window(width=1), # padding
-            Window(width=title_tail, char="─", style=grid_sty),
-            Window(height=1, width=1, char="╮", style=grid_sty),
-        ], height=1)
-        mid = VSplit([
-            Window(width=1, char="│", style=grid_sty),
-            Window(width=1), # padding
-            TextArea(text=self.line, read_only=True, width=inner_width, style=self._parse("class:value")),
-            Window(width=1), # padding
-            Window(width=self.padding_right),
-            Window(width=1, char="│", style=grid_sty),
-        ], padding = 0)
-        bottom = VSplit([
-            Window(width=1, height=1, char="├", style=grid_sty),
-            Window(width=inner_width + 2 + self.padding_right, char="─", style=grid_sty),
-            Window(width=1, height=1, char="╯", style=grid_sty),
-        ], height=1)
-        bot_add = Window(width=1, height=1, char=lambda: self.low_left[self.state], style=grid_sty, dont_extend_width=True)
-        
+        top = VSplit(
+            [
+                Window(
+                    height=1,
+                    width=1,
+                    char=lambda: self.top_left[self.state],
+                    style=grid_sty,
+                ),
+                Window(width=1),  # padding
+                Window(
+                    FormattedTextControl(
+                        lambda: [(self._parse("class:title"), self.title)]
+                    ),
+                    dont_extend_width=True,
+                ),
+                Window(width=1),  # padding
+                Window(width=title_tail, char="─", style=grid_sty),
+                Window(height=1, width=1, char="╮", style=grid_sty),
+            ],
+            height=1,
+        )
+        mid = VSplit(
+            [
+                Window(width=1, char="│", style=grid_sty),
+                Window(width=1),  # padding
+                TextArea(
+                    text=self.line,
+                    read_only=True,
+                    width=inner_width,
+                    style=self._parse("class:value"),
+                ),
+                Window(width=1),  # padding
+                Window(width=self.padding_right),
+                Window(width=1, char="│", style=grid_sty),
+            ],
+            padding=0,
+        )
+        bottom = VSplit(
+            [
+                Window(width=1, height=1, char="├", style=grid_sty),
+                Window(
+                    width=inner_width + 2 + self.padding_right, char="─", style=grid_sty
+                ),
+                Window(width=1, height=1, char="╯", style=grid_sty),
+            ],
+            height=1,
+        )
+        bot_add = Window(
+            width=1,
+            height=1,
+            char=lambda: self.low_left[self.state],
+            style=grid_sty,
+            dont_extend_width=True,
+        )
+
         module = HSplit([top, mid, bottom, bot_add])
         print_container(module, style=self.style)
 
@@ -589,10 +751,12 @@ class FinishPrompt(StepPromptBase):
         )
         module = VSplit([left, right], padding=1)
         print_container(module, style=self.style)
-        
-        
+
+
 if __name__ == "__main__":
-    prompt = MultiSelectPrompt("Select options", ["Option 1", "Option 2", "Option 3"], selected=["Option 2"])
+    prompt = MultiSelectPrompt(
+        "Select options", ["Option 1", "Option 2", "Option 3"], selected=["Option 2"]
+    )
     result = prompt.run(min_selected=1)
     FinishPrompt(True).run()
     print("Selected:", result)

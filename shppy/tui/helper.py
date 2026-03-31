@@ -1,14 +1,13 @@
 from pathlib import Path
-from prompt_toolkit.completion import PathCompleter, WordCompleter
+
+from prompt_toolkit.completion import PathCompleter
 from prompt_toolkit.layout.processors import Processor, Transformation
 
 DEFAULT_FORMAT_OPTIONS = ["xyz", "extxyz", "cif", "lammpstraj", "vasp", "vasp-xdatcar"]
 
+
 def default_path_completer() -> PathCompleter:
     return PathCompleter(expanduser=True)
-
-
-
 
 
 def validate_existing_path(text: str) -> tuple[bool, str, Path | None]:

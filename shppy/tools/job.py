@@ -1,12 +1,14 @@
+import datetime as dt
+import os
 from pathlib import Path
 from typing import Annotated, Optional
+
 import typer
-import os
-import datetime as dt
+
 from shppy.cli import app
 from shppy.shell import Shell
-from shppy.tui.prompts import TitlePrompt, FinishPrompt
 from shppy.tools.inputs import input_partitions
+from shppy.tui.prompts import FinishPrompt, TitlePrompt
 
 app = typer.Typer(help="Job management commands.", no_args_is_help=True)
 
