@@ -34,7 +34,7 @@ def make(
     r = sh.run(f'sinfo -p {partition} -h -o "%l %e %c %G"').out.strip().split()
     time, mem, cpus, gres = r
 
-    mem_per_cpu = int(int(mem.split("-")[1]) / int(cpus) / 1000) * 1000
+    mem_per_cpu = int(int(mem.split("-")[1]) / int(cpus) / 100) * 100
 
     if gres == "(null)":
         ntasks_per_node = int(cpus)
@@ -55,7 +55,7 @@ def make(
             f"#SBATCH --cpus-per-task={cpus_per_task}\n"
         )
         if gres != "(null)":
-            f.write(f"#SBATCH --gpus-per-task=1\n")
+            f.write("#SBATCH --gpus-per-task=1\n")
 
         f.write(
             "#SBATCH --output=slurm-%j.out\n"
