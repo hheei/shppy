@@ -33,8 +33,11 @@ def make(
 
     r = sh.run(f'sinfo -p {partition} -h -o "%l %e %c %G"').out.strip().split()
     time, mem, cpus, gres = r
-
-    mem_per_cpu = int(int(mem.split("-")[1]) / int(cpus) / 100) * 100
+    
+    if not mem.split("-")[1].isdigit():
+        mem_per_cpu = None
+    else:
+        mem_per_cpu = int(int(mem.split("-")[1]) / int(cpus) / 100) * 100
 
     if gres == "(null)":
         ntasks_per_node = int(cpus)
@@ -51,9 +54,10 @@ def make(
             "#SBATCH --nodes=1\n"
             f"#SBATCH --ntasks-per-node={ntasks_per_node}\n"
             f"#SBATCH --time={time}\n"
-            f"#SBATCH --mem-per-cpu={mem_per_cpu}M\n"
-            f"#SBATCH --cpus-per-task={cpus_per_task}\n"
         )
+        if mem_per_cpu is not None:
+            f.write(f"#SBATCH --mem-per-cpu={mem_per_cpu}M\n")
+        f.write(f"#SBATCH --cpus-per-task={cpus_per_task}\n")
         if gres != "(null)":
             f.write("#SBATCH --gpus-per-task=1\n")
 
