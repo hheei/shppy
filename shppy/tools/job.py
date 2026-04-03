@@ -29,7 +29,7 @@ def make(
     pth = Path(output)
     sh = Shell()
 
-    partition = input_partitions(partition, sh)
+    partition = input_partitions(partition, sh).rstrip("*")
 
     r = sh.run(f'sinfo -p {partition} -h -o "%l %e %c %G"').out.strip().split()
     time, mem, cpus, gres = r
@@ -90,7 +90,7 @@ def init(
     if job_id is None or s_dir is None:
         print("└ This script is meant to be run with `sbatch`")
         exit(1)
-    
+
     s_dir = Path(s_dir)
     g_dir = Path(global_log_dir).expanduser() / dt.datetime.now().strftime("%Y%m%d")
     g_dir.mkdir(parents=True, exist_ok=True)
