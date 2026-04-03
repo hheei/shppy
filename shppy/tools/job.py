@@ -63,6 +63,7 @@ def make(
             "\n"
             "shppy job init\n"
             "source ~/.bashrc && module purge && cd ${SLURM_SUBMIT_DIR}\n"
+            "export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK} MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK}"
         )
 
     FinishPrompt(True, "Success!").run()
@@ -80,15 +81,16 @@ def init(
         ),
     ] = "~/.jobs",
 ):
-    TitlePrompt("shppy job init").run()
+    print("┌ shppy job init")
+    print("│")
     job_id = os.environ.get("SLURM_JOB_ID", None)
     s_dir = os.environ.get("SLURM_SUBMIT_DIR", None)
     if user is None:
         user = os.getenv("USER", "UNK")
     if job_id is None or s_dir is None:
-        FinishPrompt(False, "This script is meant to be run with `sbatch`").run()
+        print("└ This script is meant to be run with `sbatch`")
         exit(1)
-
+    
     s_dir = Path(s_dir)
     g_dir = Path(global_log_dir).expanduser() / dt.datetime.now().strftime("%Y%m%d")
     g_dir.mkdir(parents=True, exist_ok=True)
@@ -106,6 +108,8 @@ def init(
     Path(s_dir / "slurm.err").symlink_to(f"slurm-{job_id}.err")
     Path(g_dir / f"slurm-{job_id}.out").symlink_to(f"slurm-{job_id}.out")
     Path(g_dir / f"slurm-{job_id}.err").symlink_to(f"slurm-{job_id}.err")
+
+    print("└ Success!")
 
 
 if __name__ == "__main__":
